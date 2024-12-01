@@ -14,13 +14,12 @@ def to_dataframe(filename):
     df = pd.read_csv(filename)
 
     # convert Date to Datetime for time series manip
-    df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d")
+    df["Date"] = pd.DatetimeIndex(df["Date"])
     df = df.set_index("Date")
     df.drop("NaT", axis=0, inplace=True)
 
-    # Expected volatility test
-    df["Normalized"] = df["Normalized"].astype(float)
-    df["Volume"] = df["Volume"].astype(float)
+    numeric_cols = ["Open", "High", "Low", "Close", "Adj Close", "Normalized", "Volume"]
+    df[numeric_cols] = df[numeric_cols].astype(float)
 
     return df
 
@@ -31,7 +30,7 @@ def get_report(df):
     profile.to_file(f"{df}_report.html")
 
 
-# Measuring volatility w/ std (dataframe, recession time period)
+# Measuring volatility of entire per w/ std (dataframe, recession time period)
 def std_returns(df, period, col):
     volatility = df.loc[
         ((df.index >= period[0]) & (df.index <= period[1])), f"{col}"
@@ -40,7 +39,18 @@ def std_returns(df, period, col):
     return volatility
 
 
-# Visualization Function(s)
+# comparing rolling returns for entire dur/recession period
+def rolling_stats(df, col, period, win_size=20):
+    rolling_returns = df.loc[period[0] : period[1], col].rolling(win_size)
+
+    features = rolling_returns.aggregate(["min", "max", "mean", "std"])
+
+    ax = features.plot()
+
+    df.loc[period[0] : period[1], col].plot(ax=ax, color="k", alpha=0.5)
+    ax.legend()
+    plt.show()
+
 
 """ Boillinger Bands - Measures volatility based on std over 
         a period of time
@@ -49,10 +59,7 @@ def std_returns(df, period, col):
          - Expected win_size = 20, num_std = 1 || 2"""
 
 
-def boil_bands(df, col, window_size, num_std):
-    # Shift to account for NaN 1st row
-    valid_indices = df.index[window_size - 1 :]
-
+def boil_bands(df, col="Adj Close", window_size=13, num_std=2):
     rolling_mean = df[col].rolling(window_size).mean()
     rolling_std = df[col].rolling(window_size).std()
 
@@ -61,34 +68,24 @@ def boil_bands(df, col, window_size, num_std):
     lower_band = rolling_mean - num_std * rolling_std
 
     plt.figure(figsize=(14, 7))
-    plt.plot(df[col], label="Index Price")
+    plt.plot(df.index, df[col], label="Index Price")
     plt.plot(
-        valid_indices,
-        rolling_mean[window_size - 1 :],
+        df.index,
+        rolling_mean,
         label="Rolling Mean",
         color="red",
     )
-    plt.plot(
-        valid_indices, upper_band[window_size - 1 :], label="Upper Band", color="blue"
-    )
-    plt.plot(
-        valid_indices, lower_band[window_size - 1 :], label="Lower Band", color="blue"
-    )
+    plt.plot(df.index, upper_band, label="Upper Band", color="k")
+    plt.plot(df.index, lower_band, label="Lower Band", color="k")
     plt.fill_between(
-        valid_indices,
-        lower_band[window_size - 1 :],
-        upper_band[window_size - 1 :],
+        df.index,
+        lower_band,
+        upper_band,
         color="grey",
         alpha=0.2,
     )
-    plt.title(f"Bollinger Bands: {df["Index"].iloc[1]}")
+    plt.title("Bollinger Bands")
     plt.xlabel("Year")
+    plt.ylabel(f"{col} Prices")
     plt.legend()
     plt.grid(True)
-
-
-"""Ex.
-df = to_dataframe("wilshire_5000_data.csv")
-print(std_returns(df, dot_bomb, "Normalized"))
-# boil_bands(df, "Normalized", 13, 2)
-# plt.show()"""
