@@ -24,7 +24,7 @@ def to_dataframe(filename):
     return df
 
 
-# Generate default statistics for comparisons
+# Generate default EDA Report
 def get_report(df):
     profile = ProfileReport(df, title=f"{df} Data Report")
     profile.to_file(f"{df}_report.html")
@@ -38,28 +38,21 @@ def std_returns(df, period, col):
 
     return volatility
 
+# rolling stats 
+def rolling_stats(df, col, period=None, win_size=15):
+    if period == None:
+        df_col = df[col]
+    else:
+        df_col = df.loc[period[0] : period[1], col]
 
-# comparing rolling returns for entire dur/recession period
-def rolling_stats(df, col, period, win_size=20):
-    rolling_returns = df.loc[period[0] : period[1], col].rolling(win_size)
-
+    rolling_returns = df_col.rolling(win_size)
     features = rolling_returns.aggregate(["min", "max", "mean", "std"])
-
     ax = features.plot()
 
-    df.loc[period[0] : period[1], col].plot(ax=ax, color="k", alpha=0.5)
+    df_col.plot(ax=ax, color="k", alpha=0.5)
     ax.legend()
-    plt.show()
-
-
-""" Boillinger Bands - Measures volatility based on std over 
-        a period of time
-         - Middle Band : Simple Moving Avg;
-         - Upper/Lower : num_std above and below mean 
-         - Expected win_size = 20, num_std = 1 || 2"""
-
-
-def boil_bands(df, col="Adj Close", window_size=13, num_std=2):
+    
+def bol_bands(df, col="Adj Close", window_size=13, num_std=2):
     rolling_mean = df[col].rolling(window_size).mean()
     rolling_std = df[col].rolling(window_size).std()
 
@@ -89,3 +82,4 @@ def boil_bands(df, col="Adj Close", window_size=13, num_std=2):
     plt.ylabel(f"{col} Prices")
     plt.legend()
     plt.grid(True)
+
