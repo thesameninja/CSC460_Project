@@ -1,13 +1,17 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from ydata_profiling import ProfileReport
 
 # Recessions DB, GR, COVID -- [Start, End]
-dot_bomb = ["2001-03-01", "2001-11-30"]
-great_rec = ["2007-12-01", "2009-06-30"]
-covid = ["2020-02-01", "2020-04-30"]
+recessions = {
+    "dot_bomb": ["2001-03-01", "2001-11-30"],
+    "great_rec": ["2007-12-01", "2009-06-30"],
+    "covid": ["2020-02-01", "2020-04-30"]
+}
 
+sns.set_theme(style="whitegrid")
 
 def to_dataframe(filename):
     # drop first row, contains irrelevant values
@@ -18,6 +22,7 @@ def to_dataframe(filename):
     df = df.set_index("Date")
     df.drop("NaT", axis=0, inplace=True)
 
+    # Volume is constantly 0
     numeric_cols = ["Open", "High", "Low", "Close", "Adj Close", "Normalized", "Volume"]
     df[numeric_cols] = df[numeric_cols].astype(float)
 
@@ -26,8 +31,8 @@ def to_dataframe(filename):
 
 # Generate default EDA Report
 def get_report(df):
-    profile = ProfileReport(df, title=f"{df} Data Report")
-    profile.to_file(f"{df}_report.html")
+    profile = ProfileReport(df, title=f"{df["Index"][0]} Data Report")
+    profile.to_file(f"{df["Index"][0]}_report.html")
 
 
 # Measuring volatility of entire per w/ std (dataframe, recession time period)
@@ -38,20 +43,49 @@ def std_returns(df, period, col):
 
     return volatility
 
-# rolling stats 
-def rolling_stats(df, col, period=None, win_size=15):
-    if period == None:
-        df_col = df[col]
-    else:
-        df_col = df.loc[period[0] : period[1], col]
+# Generalized Rolling Average Function
+def rolling_avg(df, col, win_size=14):
+    f, axes = plt.subplots(3,1, figsize=(16,10), sharey=True)
 
-    rolling_returns = df_col.rolling(win_size)
-    features = rolling_returns.aggregate(["min", "max", "mean", "std"])
-    ax = features.plot()
+    for ax, (period, dates) in zip(axes, recessions.items()):
+        start, end = dates
+        df_col = df.loc[start : end, col]
 
-    df_col.plot(ax=ax, color="k", alpha=0.5)
-    ax.legend()
+        rolling_avg = df_col.rolling(window=win_size, center=False).mean()
+        ax.plot(rolling_avg, label=f'{period}')
+        ax.grid(True)
+        ax.set_xlabel("Date")
+        ax.tick_params(labelrotation=45)
+        ax.set_ylabel(f"{col}")
+        ax.set_title(f"{period} Rolling Avg Over Time")
     
+    f.tight_layout()
+
+# win_size may be changed for COVID period
+def rolling_std(df, col, win_size=14):
+    f, axes = plt.subplots(3,1, figsize=(16,10), sharey=True)
+
+    for ax, (period, dates) in zip(axes, recessions.items()):
+        start, end = dates
+        df_col = df.loc[start : end, col]
+
+        rolling_avg = df_col.rolling(window=win_size, center=False).std()
+        ax.plot(rolling_avg, label=f'{period}')
+        ax.grid(True)
+        ax.set_xlabel("Date")
+        ax.set_ylabel(f"{col}")
+        ax.set_title(f"{period} Rolling Standard Deviation Over Time")
+    
+    f.tight_layout()
+
+# distribution of Adjusted Close Prices
+def close_hist(df):
+    sns.histplot(df["Adj Close"], bins=13, kde=True)
+    plt.title(f'{df['Index'][0]} Index Adjusted Close Prices')
+    plt.xlabel("Daily Adjusted Close")
+    plt.ylabel("Frequency")
+
+# Optional
 def bol_bands(df, col="Adj Close", window_size=13, num_std=2):
     rolling_mean = df[col].rolling(window_size).mean()
     rolling_std = df[col].rolling(window_size).std()
