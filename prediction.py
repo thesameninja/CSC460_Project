@@ -7,6 +7,13 @@ from ydata_profiling import ProfileReport
 dot_bomb = ["2001-03-01", "2001-11-30"]
 great_rec = ["2007-12-01", "2009-06-30"]
 covid = ["2020-02-01", "2020-04-30"]
+trade_war = ["2018-03-22", "2018-12-31"]
+trade_war_subranges = {
+    "Initial Announcements": ["2018-03-22", "2018-04-02"],
+    "Tariff Finalization and Start": ["2018-06-15", "2018-07-06"],
+    "August-September Escalation": ["2018-08-23", "2018-09-24"],
+    "December Volatility": ["2018-12-01", "2018-12-31"]
+}
 
 def to_dataframe(filename):
     """
@@ -284,9 +291,16 @@ if __name__ == "__main__":
         print("\nMonte Carlo Simulation (Shanghai Composite) - Great Recession scenario:")
         monte_carlo_simulation(shanghai_df, great_rec, col="Adj Close", horizon=60, num_simulations=100000)
 
+        print("\nMonte Carlo Simulation (Wilshire 5000) - Trade War scenario:")
+        monte_carlo_simulation(wilshire_df, trade_war, col="Adj Close", horizon=60, num_simulations=100000)
+
+        print("\nMonte Carlo Simulation (Shanghai Composite) - Trade War scenario:")
+        monte_carlo_simulation(shanghai_df, trade_war, col="Adj Close", horizon=60, num_simulations=100000)
+
+
         # Combined scenario (Dot-Com + Great Recession + COVID)
         print("\nMonte Carlo Simulation (Wilshire 5000) - Combined Dot-Com + Great Recession + COVID scenario:")
-        combined_periods = [dot_bomb, great_rec, covid]
+        combined_periods = [dot_bomb, great_rec, covid, trade_war]
         combined_period_monte_carlo_simulation(wilshire_df, combined_periods, col="Adj Close", horizon=60, num_simulations=100000)
 
         print("\nMonte Carlo Simulation (Shanghai Composite) - Combined Dot-Com + Great Recession + COVID scenario:")
