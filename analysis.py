@@ -8,6 +8,7 @@ from ydata_profiling import ProfileReport
 recessions = {
     "dot_bomb": ["2001-03-01", "2001-11-30"],
     "great_rec": ["2007-12-01", "2009-06-30"],
+    "trade_war" : ["2018-03-22", "2018-12-31"],
     "covid": ["2020-02-01", "2020-04-30"]
 }
 
